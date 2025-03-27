@@ -40,12 +40,6 @@ module.exports = (sequelize) => {
     {
       tableName: "wholesaler",
       timestamps: true,
-      indexes: [
-        {
-          unique: true,
-          fields: ["mobile_number"],
-        },
-      ],
     }
   );
 

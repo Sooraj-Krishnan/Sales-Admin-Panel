@@ -23,6 +23,17 @@ exports.getMonthlyTurnover = async (year) => {
   const startDate = `${year}-01-01`;
   const endDate = `${year}-12-31`;
 
+  // Get wholesaler names first
+  const wholesalers = await Wholesaler.findAll({
+    attributes: ["id", "name"],
+  });
+
+  const wholesalerMap = {};
+  wholesalers.forEach((w) => {
+    wholesalerMap[w.id] = w.name;
+  });
+
+  // Then get turnover data without including Wholesaler model
   const result = await Stock.findAll({
     attributes: [
       "wholesaler_id",
@@ -34,12 +45,6 @@ exports.getMonthlyTurnover = async (year) => {
         [Op.between]: [startDate, endDate],
       },
     },
-    include: [
-      {
-        model: Wholesaler,
-        attributes: ["name"],
-      },
-    ],
     group: ["wholesaler_id", sequelize.fn("MONTH", sequelize.col("date"))],
     order: [
       ["wholesaler_id", "ASC"],
@@ -54,7 +59,8 @@ exports.getMonthlyTurnover = async (year) => {
     const wholesalerId = item.wholesaler_id;
     const month = item.getDataValue("month");
     const turnover = parseFloat(item.getDataValue("total_turnover"));
-    const wholesalerName = item.Wholesaler.name;
+    const wholesalerName =
+      wholesalerMap[wholesalerId] || `Wholesaler ${wholesalerId}`;
 
     if (!transformedData[wholesalerId]) {
       transformedData[wholesalerId] = {
@@ -72,16 +78,31 @@ exports.getMonthlyTurnover = async (year) => {
 
 // Get max turnover of each wholesaler from a single retailer
 exports.getMaxTurnoverFromSingleRetailer = async () => {
-  // First get total turnover for each wholesaler-retailer pair
+  // First get wholesaler and retailer names
+  const wholesalers = await Wholesaler.findAll({
+    attributes: ["id", "name"],
+  });
+
+  const retailers = await Retailer.findAll({
+    attributes: ["id", "name"],
+  });
+
+  const wholesalerMap = {};
+  wholesalers.forEach((w) => {
+    wholesalerMap[w.id] = w.name;
+  });
+
+  const retailerMap = {};
+  retailers.forEach((r) => {
+    retailerMap[r.id] = r.name;
+  });
+
+  // Get turnover data without including Wholesaler and Retailer models
   const turnovers = await Stock.findAll({
     attributes: [
       "wholesaler_id",
       "retailer_id",
       [sequelize.fn("SUM", sequelize.col("stock_amount")), "total_turnover"],
-    ],
-    include: [
-      { model: Wholesaler, attributes: ["name"] },
-      { model: Retailer, attributes: ["name"] },
     ],
     group: ["wholesaler_id", "retailer_id"],
     order: [
@@ -95,6 +116,7 @@ exports.getMaxTurnoverFromSingleRetailer = async () => {
 
   turnovers.forEach((turnover) => {
     const wholesalerId = turnover.wholesaler_id;
+    const retailerId = turnover.retailer_id;
     const currentTurnover = parseFloat(turnover.getDataValue("total_turnover"));
 
     if (
@@ -103,9 +125,10 @@ exports.getMaxTurnoverFromSingleRetailer = async () => {
     ) {
       maxTurnoverMap[wholesalerId] = {
         wholesaler_id: wholesalerId,
-        wholesaler_name: turnover.Wholesaler.name,
-        retailer_id: turnover.retailer_id,
-        retailer_name: turnover.Retailer.name,
+        wholesaler_name:
+          wholesalerMap[wholesalerId] || `Wholesaler ${wholesalerId}`,
+        retailer_id: retailerId,
+        retailer_name: retailerMap[retailerId] || `Retailer ${retailerId}`,
         turnover: currentTurnover,
       };
     }

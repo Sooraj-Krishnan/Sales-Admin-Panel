@@ -4,26 +4,29 @@ const { Retailer, Wholesaler, sequelize } = require("../models");
 exports.getRetailersWithSingleWholesaler = async () => {
   // Using a subquery to find retailers that are associated with exactly one wholesaler
   const retailers = await Retailer.findAll({
+    attributes: [
+      "id",
+      "name",
+      "mobile_number",
+      // Add any other Retailer attributes you want to include
+      [
+        sequelize.literal(`(
+          SELECT COUNT(*)
+          FROM wholesaler_retailer
+          WHERE retailerId = Retailer.id
+        )`),
+        "wholesaler_count",
+      ],
+    ],
     include: [
       {
         model: Wholesaler,
         through: { attributes: [] },
+        attributes: ["id", "name"], // Explicitly specify Wholesaler attributes
       },
     ],
-    attributes: {
-      include: [
-        [
-          sequelize.literal(`(
-            SELECT COUNT(*)
-            FROM WholesalerRetailer
-            WHERE retailer_id = Retailer.id
-          )`),
-          "wholesaler_count",
-        ],
-      ],
-    },
     having: sequelize.literal("wholesaler_count = 1"),
-    group: ["Retailer.id"],
+    group: ["Retailer.id", "Wholesalers.id"], // Include Wholesalers.id in GROUP BY
   });
 
   return retailers;

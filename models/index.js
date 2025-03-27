@@ -22,8 +22,8 @@ const db = {
 
 // Associations based on requirements
 // "wholesaler has n(many) number retailers and retailers can associate with n(many) number of wholesalers"
-db.Wholesaler.belongsToMany(db.Retailer, { through: "WholesalerRetailer" });
-db.Retailer.belongsToMany(db.Wholesaler, { through: "WholesalerRetailer" });
+db.Wholesaler.belongsToMany(db.Retailer, { through: "wholesaler_retailer" });
+db.Retailer.belongsToMany(db.Wholesaler, { through: "wholesaler_retailer" });
 
 // "Wholesalers can sell stock to the retailers"
 db.Stock.belongsTo(db.Wholesaler);
